@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="OMSApp.Core/OMSApp.Core.csproj" />
+  <Project Path="OMSApp.Data/OMSApp.Data.csproj" />
+  <Project Path="OMSApp/OMSApp.csproj" />
+</Solution>
