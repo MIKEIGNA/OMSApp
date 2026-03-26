@@ -1,5 +1,5 @@
-﻿// ViewModels/AddNewItemModel.cs
-
+﻿// ViewModels/AddNewItemViewModel.cs
+using System;
 using System.Collections.ObjectModel;
 using System.Windows;
 
@@ -7,61 +7,64 @@ public class AddNewItemViewModel : BaseViewModel
 {
     private readonly OMSService _service = new OMSService();
 
-    public int BasketId { get; }
+    public Action? OnSaved { get; set; }
+    public Action? OnCancelled { get; set; }
 
-    public ObservableCollection<Product> Products { get; set; }
+    public ObservableCollection<Basket> Baskets { get; set; } = new();
+    public ObservableCollection<Product> Products { get; set; } = new();
 
-    public Product SelectedProduct { get; set; }
+    private Basket? _selectedBasket;
+    public Basket? SelectedBasket
+    {
+        get => _selectedBasket;
+        set { _selectedBasket = value; OnPropertyChanged(nameof(SelectedBasket)); }
+    }
 
+    private Product? _selectedProduct;
+    public Product? SelectedProduct
+    {
+        get => _selectedProduct;
+        set { _selectedProduct = value; OnPropertyChanged(nameof(SelectedProduct)); }
+    }
 
     private int _quantity;
     public int Quantity
     {
         get => _quantity;
-        set
-        {
-            _quantity = value;
-            OnPropertyChanged(nameof(Quantity));
-        }
+        set { _quantity = value; OnPropertyChanged(nameof(Quantity)); }
     }
 
     public RelayCommand SaveCommand { get; }
+    public RelayCommand CancelCommand { get; }
 
-    public AddNewItemViewModel(int basketId)
+    public AddNewItemViewModel()
     {
-        BasketId = basketId;
-        Products = new ObservableCollection<Product>(_service.GetProducts());
-
-        SaveCommand = new RelayCommand(Save);
+        SaveCommand = new RelayCommand(async () => await SaveAsync());
+        CancelCommand = new RelayCommand(() => OnCancelled?.Invoke());
+        _ = LoadDataAsync();
     }
 
-    private void Save()
+    private async System.Threading.Tasks.Task LoadDataAsync()
     {
-        if (SelectedProduct == null || Quantity <= 0)
+        var baskets = await _service.GetBasketsAsync();
+        Baskets = new ObservableCollection<Basket>(baskets);
+        OnPropertyChanged(nameof(Baskets));
+
+        var products = await _service.GetProductsAsync();
+        Products = new ObservableCollection<Product>(products);
+        OnPropertyChanged(nameof(Products));
+    }
+
+    private async System.Threading.Tasks.Task SaveAsync()
+    {
+        if (SelectedBasket == null || SelectedProduct == null || Quantity <= 0)
         {
-            System.Windows.MessageBox.Show("Select product and enter valid quantity!");
+            MessageBox.Show("Please select a basket, a product, and enter a valid quantity.",
+                            "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
 
-
-        var item = new BasketItem
-        {
-            IdBasket = BasketId,
-            IdProduct = SelectedProduct.IdProduct,
-            Quantity = Quantity
-        };
-
-
-        var success = _service.AddBasketItem(item, out string msg);
-
-        System.Windows.MessageBox.Show(msg);
-
-        if (success)
-        {
-            System.Windows.Application.Current.Windows
-                .OfType<System.Windows.Window>()
-                .SingleOrDefault(w => w.IsActive)
-                ?.Close();
-        }
+        await _service.AddBasketItemAsync(SelectedBasket.IdBasket, SelectedProduct.IdProduct, Quantity);
+        OnSaved?.Invoke();
     }
 }

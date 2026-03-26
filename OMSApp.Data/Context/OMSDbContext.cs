@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 
 public class OMSDbContext : DbContext
 {
+    public DbSet<Shopper> Shoppers { get; set; }
     public DbSet<Basket> Baskets { get; set; }
     public DbSet<Product> Products { get; set; }
     public DbSet<BasketItem> BasketItems { get; set; }
@@ -15,21 +16,17 @@ public class OMSDbContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        // ========================
-        // PRIMARY KEYS
-        // ========================
+        modelBuilder.Entity<Shopper>().HasKey(s => s.IdShopper);
+        modelBuilder.Entity<Basket>().HasKey(b => b.IdBasket);
+        modelBuilder.Entity<Product>().HasKey(p => p.IdProduct);
+        modelBuilder.Entity<BasketItem>().HasKey(bi => bi.IdBasketItem);
+
         modelBuilder.Entity<Basket>()
-            .HasKey(b => b.IdBasket);
+            .HasOne(b => b.Shopper)
+            .WithMany(s => s.Baskets)
+            .HasForeignKey(b => b.IdShopper)
+            .OnDelete(DeleteBehavior.Cascade);
 
-        modelBuilder.Entity<Product>()
-            .HasKey(p => p.IdProduct);
-
-        modelBuilder.Entity<BasketItem>()
-            .HasKey(bi => bi.IdBasketItem);
-
-        // ========================
-        // RELATIONSHIPS (CRITICAL FIX)
-        // ========================
         modelBuilder.Entity<BasketItem>()
             .HasOne(bi => bi.Basket)
             .WithMany(b => b.BasketItems)
@@ -42,25 +39,18 @@ public class OMSDbContext : DbContext
             .HasForeignKey(bi => bi.IdProduct)
             .OnDelete(DeleteBehavior.Restrict);
 
-        // ========================
-        // PROPERTY CONFIG
-        // ========================
         modelBuilder.Entity<Product>()
             .Property(p => p.Price)
             .HasPrecision(18, 2);
 
-        // ========================
-        // SEED DATA
-        // ========================
-        modelBuilder.Entity<Basket>().HasData(
-            new Basket { IdBasket = 1, CustomerName = "John Doe" },
-            new Basket { IdBasket = 2, CustomerName = "Jane Smith" }
-        );
+        modelBuilder.Entity<Basket>()
+            .Property(b => b.SubTotal)
+            .HasPrecision(18, 2);
 
-        modelBuilder.Entity<Product>().HasData(
-            new Product { IdProduct = 1, ProductName = "Laptop", Price = 1000 },
-            new Product { IdProduct = 2, ProductName = "Mouse", Price = 20 },
-            new Product { IdProduct = 3, ProductName = "Keyboard", Price = 50 }
-        );
+        // Map to the OMS.sql table names
+        modelBuilder.Entity<Shopper>().ToTable("Shopper");
+        modelBuilder.Entity<Basket>().ToTable("Basket");
+        modelBuilder.Entity<Product>().ToTable("Product");
+        modelBuilder.Entity<BasketItem>().ToTable("BasketItem");
     }
 }

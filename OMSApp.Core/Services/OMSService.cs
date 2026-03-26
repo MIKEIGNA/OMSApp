@@ -1,47 +1,54 @@
 ﻿// Services/OMSService.cs
 using Microsoft.EntityFrameworkCore;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 
 public class OMSService : IOMSService
 {
-    public List<Basket> GetBaskets()
+    public async Task<List<Basket>> GetBasketsAsync()
     {
         using var db = new OMSDbContext();
-        return db.Baskets.ToList();
+        return await db.Baskets
+            .Include(b => b.Shopper)
+            .ToListAsync();
     }
 
-    public List<BasketItem> GetBasketItems(int basketId)
+    public async Task<List<BasketItem>> GetBasketItemsAsync(int basketId)
     {
         using var db = new OMSDbContext();
-
-        return db.BasketItems
+        return await db.BasketItems
             .Where(x => x.IdBasket == basketId)
             .Include(x => x.Product)
-            .ToList();
+            .Include(x => x.Basket)
+            .ToListAsync();
     }
 
-    public List<Product> GetProducts()
+    public async Task<List<Product>> GetProductsAsync()
     {
         using var db = new OMSDbContext();
-        return db.Products.ToList();
+        return await db.Products.ToListAsync();
     }
 
-
-    public bool AddBasketItem(BasketItem item, out string message)
+    public async Task<bool> AddBasketItemAsync(int basketId, int productId, int quantity)
     {
-        try
-        {
-            using var db = new OMSDbContext();
+        using var db = new OMSDbContext();
 
-            db.BasketItems.Add(item);
-            db.SaveChanges();
+        // IdBasketItem = current max + 1
+        int nextId = await db.BasketItems.AnyAsync()
+            ? await db.BasketItems.MaxAsync(bi => bi.IdBasketItem) + 1
+            : 1;
 
-            message = "Item saved successfully!";
-            return true;
-        }
-        catch (Exception ex)
+        var item = new BasketItem
         {
-            message = ex.InnerException?.Message ?? ex.Message;
-            return false;
-        }
+            IdBasketItem = nextId,
+            IdBasket = basketId,
+            IdProduct = productId,
+            Quantity = quantity
+        };
+
+        db.BasketItems.Add(item);
+        await db.SaveChangesAsync();
+        return true;
     }
 }

@@ -1,10 +1,11 @@
 ﻿// Interfaces/IOMSService.cs
+using System.Collections.Generic;
+using System.Threading.Tasks;
+
 public interface IOMSService
 {
-    List<Basket> GetBaskets();
-    List<BasketItem> GetBasketItems(int basketId);
-    List<Product> GetProducts();
-
-    bool AddBasketItem(BasketItem item, out string message);
-
+    Task<List<Basket>> GetBasketsAsync();
+    Task<List<BasketItem>> GetBasketItemsAsync(int basketId);
+    Task<List<Product>> GetProductsAsync();
+    Task<bool> AddBasketItemAsync(int basketId, int productId, int quantity);
 }

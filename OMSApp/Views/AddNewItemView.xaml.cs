@@ -1,14 +1,13 @@
-﻿// Views/AddNewItemView.xaml.cs
-using System.Windows;
+// Views/AddNewItemView.xaml.cs
+using System.Windows.Controls;
 
 namespace OMSApp.Views
 {
-    public partial class AddNewItemView : Window
+    public partial class AddNewItemView : UserControl
     {
-        public AddNewItemView(int basketId)
+        public AddNewItemView()
         {
             InitializeComponent();
-            DataContext = new AddNewItemViewModel(basketId);
         }
     }
 }

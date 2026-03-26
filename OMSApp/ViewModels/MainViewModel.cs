@@ -1,61 +1,48 @@
 ﻿// ViewModels/MainViewModel.cs
-using System.Collections.ObjectModel;
-using OMSApp.Views;
+using System.Windows;
+
 public class MainViewModel : BaseViewModel
 {
-    private readonly OMSService _service = new OMSService();
-
-    public ObservableCollection<Basket> Baskets { get; set; }
-    public ObservableCollection<BasketItem> BasketItems { get; set; }
-
-    private Basket _selectedBasket;
-    public Basket SelectedBasket
+    private object _currentView;
+    public object CurrentView
     {
-        get => _selectedBasket;
-        set
-        {
-            _selectedBasket = value;
-            OnPropertyChanged(nameof(SelectedBasket));
-            LoadItems();
-        }
+        get => _currentView;
+        set { _currentView = value; OnPropertyChanged(nameof(CurrentView)); }
     }
 
-    public RelayCommand AddItemCommand { get; }
+    public RelayCommand ShowListOrderDetailsCommand { get; }
+    public RelayCommand ShowAddNewItemCommand { get; }
+    public RelayCommand ExitCommand { get; }
+
+    private ListOrderDetailsViewModel _listOrderDetailsVM;
 
     public MainViewModel()
     {
-        LoadBaskets();
-        BasketItems = new ObservableCollection<BasketItem>();
-        AddItemCommand = new RelayCommand(OpenAddItem);
+        _listOrderDetailsVM = new ListOrderDetailsViewModel();
+
+        ShowListOrderDetailsCommand = new RelayCommand(ShowListOrderDetails);
+        ShowAddNewItemCommand = new RelayCommand(ShowAddNewItem);
+        ExitCommand = new RelayCommand(() => Application.Current.Shutdown());
+
+        // Default view
+        ShowListOrderDetails();
     }
 
-    private void LoadBaskets()
+    private void ShowListOrderDetails()
     {
-        Baskets = new ObservableCollection<Basket>(_service.GetBaskets());
+        CurrentView = _listOrderDetailsVM;
     }
 
-    private void LoadItems()
+    private void ShowAddNewItem()
     {
-        if (SelectedBasket == null) return;
-
-        BasketItems = new ObservableCollection<BasketItem>(
-            _service.GetBasketItems(SelectedBasket.IdBasket)
-        );
-
-        OnPropertyChanged(nameof(BasketItems));
-    }
-
-    private void OpenAddItem()
-    {
-        if (SelectedBasket == null)
+        var vm = new AddNewItemViewModel();
+        vm.OnSaved = () =>
         {
-            System.Windows.MessageBox.Show("Select a basket first!");
-            return;
-        }
-
-        var window = new AddNewItemView(SelectedBasket.IdBasket);
-        window.ShowDialog();
-
-        LoadItems();
+            // Refresh list and navigate back
+            _listOrderDetailsVM.RefreshBasketItems();
+            ShowListOrderDetails();
+        };
+        vm.OnCancelled = ShowListOrderDetails;
+        CurrentView = vm;
     }
 }
